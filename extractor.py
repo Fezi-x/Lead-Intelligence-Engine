@@ -2,26 +2,42 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import time
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.WARNING, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 class Extractor:
     def __init__(self, timeout=5, max_chars=10000):
         self.timeout = timeout
         self.max_chars = max_chars
 
-    def fetch_url(self, url):
-        """Fetches the content of a URL and returns the raw HTML."""
+    def fetch_url(self, url, use_jina=False):
+        """Fetches the content of a URL and returns the raw HTML or Markdown from Jina."""
+        target_url = f"https://r.jina.ai/{url}" if use_jina else url
+        
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        
         try:
             start_time = time.time()
-            response = requests.get(url, timeout=self.timeout)
+            response = requests.get(target_url, headers=headers, timeout=self.timeout, allow_redirects=True)
             response.raise_for_status()
             latency = time.time() - start_time
             return response.text, latency
         except requests.exceptions.RequestException as e:
-            raise Exception(f"Failed to fetch URL {url}: {str(e)}")
+            raise Exception(f"Failed to fetch {url} (Jina={use_jina}): {str(e)}")
 
-    def clean_html(self, html):
-        """Extracts text content from HTML, removing scripts, styles, and extra whitespace."""
-        soup = BeautifulSoup(html, 'html.parser')
+    def clean_html(self, content, is_markdown=False):
+        """Extracts text content. If markdown (from Jina), return as is. Otherwise clean HTML."""
+        if is_markdown:
+            return content.strip()
+            
+        soup = BeautifulSoup(content, 'html.parser')
 
         # Remove script and style elements
         for script_or_style in soup(["script", "style", "nav", "footer", "header"]):
@@ -38,9 +54,52 @@ class Extractor:
         return text
 
     def process(self, url):
-        """Processes a URL: fetch -> clean -> truncate -> return."""
-        html, latency = self.fetch_url(url)
-        raw_text = self.clean_html(html)
+        """Processes a URL with smart fallback for SPAs/protected sites."""
+        # Step 3: Update Extraction Router for Facebook
+        if "facebook.com" in url.lower():
+            from facebook_client import get_facebook_page_data
+            result = get_facebook_page_data(url)
+            
+            # If API failed, return the error structure so the UI can handle it
+            if "error" in result:
+                return result
+                
+            # Otherwise, return it in the format expected by LeadEngine
+            # (which expects a 'text' field for the AI Evaluator)
+            return {
+                "url": url,
+                "text": result.get("text", ""),
+                "char_count": len(result.get("text", "")),
+                "platform": "facebook",
+                "metadata": result
+            }
+
+        raw_text = ""
+        latency = 0
+        
+        # 1. Try local extraction first
+        try:
+            html, lat = self.fetch_url(url)
+            latency += lat
+            raw_text = self.clean_html(html)
+        except Exception as e:
+            logger.warning(f"Local extraction for {url} failed: {e}. Trying fallback...")
+            # If local fails, we leave raw_text empty and trigger fallback
+            pass
+
+        # 2. Check if result is suspicious or if local failed
+        # suspicious = char count < 200 (usually just a logo or title)
+        if len(raw_text.strip()) < 200:
+            logger.info(f"Triggering Smart Fallback for {url} (Content length: {len(raw_text)})")
+            try:
+                jina_md, jina_latency = self.fetch_url(url, use_jina=True)
+                raw_text = self.clean_html(jina_md, is_markdown=True)
+                latency += jina_latency
+            except Exception as fe:
+                logger.error(f"Fallback to Jina failed: {fe}")
+                # If both fail and we have nothing, raise the first error
+                if not raw_text:
+                    raise Exception(f"Extraction failed for {url}. Local error: {fe}")
         
         # Truncate to max_chars
         truncated_text = raw_text[:self.max_chars]

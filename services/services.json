@@ -9,13 +9,15 @@
           "SMEs",
           "Personal Brands",
           "Startups",
-          "Agencies"
+          "Agencies",
+          "Local manual businesses"
         ],
         "use_case_signals": [
           "no website",
           "basic online presence",
           "small business",
-          "facebook-only business"
+          "facebook-only business",
+          "outdated design"
         ]
       },
       {
@@ -35,101 +37,33 @@
           "high transaction volume"
         ]
       }
-    ],
-    "add_ons": [
-      {
-        "name": "Extra Page",
-        "price": "Varies"
-      },
-      {
-        "name": "Blog / CMS System",
-        "price": "Varies"
-      },
-      {
-        "name": "E-commerce Setup",
-        "price": "Varies"
-      },
-      {
-        "name": "Booking System",
-        "price": "Varies"
-      },
-      {
-        "name": "Multi-language Support",
-        "price": "Varies"
-      },
-      {
-        "name": "Payment Gateway Integration",
-        "price": "Varies"
-      },
-      {
-        "name": "Advanced UI Animation",
-        "price": "Varies"
-      }
-    ],
-    "maintenance_plans": [
-      {
-        "name": "Basic Maintenance",
-        "price": "Varies"
-      },
-      {
-        "name": "Growth Maintenance",
-        "price": "Varies"
-      },
-      {
-        "name": "Pro Maintenance",
-        "price": "Varies"
-      }
     ]
   },
   "marketing_services": {
     "services": [
       {
         "name": "Basic Marketing Package",
-        "focus": "Content + Branding foundation"
+        "focus": "Content + Branding foundation",
+        "ideal_for": ["New businesses", "Consistent posting needs"],
+        "use_case_signals": ["low posting frequency", "stock-heavy content"]
       },
       {
         "name": "Standard Marketing Package",
-        "focus": "Messaging + USP + Content Calendar"
+        "focus": "Messaging + USP + Content Calendar",
+        "ideal_for": ["Growth-stage businesses", "Service providers"],
+        "use_case_signals": ["post-only strategy", "no clear USP"]
       },
       {
         "name": "Premium Marketing Package",
-        "focus": "Deep Analysis + Motion Content + Priority Consult"
+        "focus": "Deep Analysis + Motion Content + Priority Consult",
+        "ideal_for": ["High-ticket services", "Professional brands"],
+        "use_case_signals": ["high engagement but low conversion", "needs video/motion"]
       },
       {
         "name": "Enterprise Marketing Package",
-        "focus": "Full Strategy + Roadmap + High Volume Content"
-      }
-    ],
-    "add_ons": [
-      {
-        "type": "Content",
-        "name": "Copy Content",
-        "notes": "Core Values/ Key Point"
-      },
-      {
-        "type": "Content",
-        "name": "Knowledge Sharing",
-        "notes": "To Educated People"
-      },
-      {
-        "type": "Content",
-        "name": "Branding Script",
-        "notes": "Campaign/video scripts"
-      },
-      {
-        "type": "Graphic",
-        "name": "Static",
-        "notes": "Single posts"
-      },
-      {
-        "type": "Graphic",
-        "name": "Multiple",
-        "notes": "Multi-slide"
-      },
-      {
-        "type": "Graphic",
-        "name": "Motion",
-        "notes": "Animated graphics/video clips"
+        "focus": "Full Strategy + Roadmap + High Volume Content",
+        "ideal_for": ["Large corporations", "Regional brands"],
+        "use_case_signals": ["multi-channel needs", "scaling fast"]
       }
     ]
   }
