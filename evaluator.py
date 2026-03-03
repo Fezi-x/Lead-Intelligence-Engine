@@ -31,6 +31,19 @@ class Evaluator:
         except Exception as e:
             raise Exception(f"Failed to load system prompt: {e}")
 
+    def _get_all_service_names(self, services_obj):
+        """Recursively extracts all 'name' fields from the services structure."""
+        names = []
+        if isinstance(services_obj, dict):
+            if "name" in services_obj:
+                names.append(services_obj["name"])
+            for value in services_obj.values():
+                names.extend(self._get_all_service_names(value))
+        elif isinstance(services_obj, list):
+            for item in services_obj:
+                names.extend(self._get_all_service_names(item))
+        return names
+
     def evaluate(self, content, rag_context=None, retry_count=1):
         """Sends content to LLM and returns structured evaluation with retry logic."""
         services = self._load_services()
@@ -65,7 +78,7 @@ class Evaluator:
                     # Placeholder state: no services to validate against
                     return result
 
-                valid_service_names = [s.get("name") for s in services if s.get("name")]
+                valid_service_names = self._get_all_service_names(services)
                 if result.get("primary_service") not in valid_service_names:
                     raise ValueError(f"Selected service '{result.get('primary_service')}' is not in the approved list.")
                 

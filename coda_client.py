@@ -38,6 +38,7 @@ class CodaClient:
                 {
                     "cells": [
                         {"column": "Business URL", "value": evaluation_data.get("url")},
+                        {"column": "Business Name", "value": evaluation_data.get("business_name")},
                         {"column": "Business Type", "value": evaluation_data.get("business_type")},
                         {"column": "Primary Service", "value": evaluation_data.get("primary_service")},
                         {"column": "Fit Score", "value": evaluation_data.get("fit_score")},
@@ -60,7 +61,8 @@ if __name__ == "__main__":
     client = CodaClient()
     mock_data = {
         "url": "https://test.com",
-        "business_type": "Test Business",
+        "business_name": "Test Business Name",
+        "business_type": "Test Business Type",
         "primary_service": "Test Service",
         "fit_score": 90,
         "reasoning": "Test reasoning",

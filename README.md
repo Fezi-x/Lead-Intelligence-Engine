@@ -1,4 +1,4 @@
-# Kraken Lead Intelligence Engine
+# Lead Intelligence Engine
 
 A stateless evaluation engine that extracts business presence from a public URL, enriches it with RAG context, and categorizes it into a specific service.
 

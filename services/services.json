@@ -1,1 +1,136 @@
-[]
+{
+  "technical_services": {
+    "services": [
+      {
+        "name": "Foundation Package",
+        "category": "Website Development",
+        "description": "1–3 page static website, portfolio or business showcase, mobile responsive, social media integration, analytics ready.",
+        "ideal_for": [
+          "SMEs",
+          "Personal Brands",
+          "Startups",
+          "Agencies"
+        ],
+        "use_case_signals": [
+          "no website",
+          "basic online presence",
+          "small business",
+          "facebook-only business"
+        ]
+      },
+      {
+        "name": "Custom Digital Solutions",
+        "category": "Advanced Development",
+        "description": "Corporate websites, web applications, mobile applications, desktop software, internal systems, full strategy planning.",
+        "ideal_for": [
+          "Enterprises",
+          "Traditional Businesses",
+          "NGOs",
+          "E-commerce"
+        ],
+        "use_case_signals": [
+          "complex operations",
+          "multiple departments",
+          "internal systems needed",
+          "high transaction volume"
+        ]
+      }
+    ],
+    "add_ons": [
+      {
+        "name": "Extra Page",
+        "price": "Varies"
+      },
+      {
+        "name": "Blog / CMS System",
+        "price": "Varies"
+      },
+      {
+        "name": "E-commerce Setup",
+        "price": "Varies"
+      },
+      {
+        "name": "Booking System",
+        "price": "Varies"
+      },
+      {
+        "name": "Multi-language Support",
+        "price": "Varies"
+      },
+      {
+        "name": "Payment Gateway Integration",
+        "price": "Varies"
+      },
+      {
+        "name": "Advanced UI Animation",
+        "price": "Varies"
+      }
+    ],
+    "maintenance_plans": [
+      {
+        "name": "Basic Maintenance",
+        "price": "Varies"
+      },
+      {
+        "name": "Growth Maintenance",
+        "price": "Varies"
+      },
+      {
+        "name": "Pro Maintenance",
+        "price": "Varies"
+      }
+    ]
+  },
+  "marketing_services": {
+    "services": [
+      {
+        "name": "Basic Marketing Package",
+        "focus": "Content + Branding foundation"
+      },
+      {
+        "name": "Standard Marketing Package",
+        "focus": "Messaging + USP + Content Calendar"
+      },
+      {
+        "name": "Premium Marketing Package",
+        "focus": "Deep Analysis + Motion Content + Priority Consult"
+      },
+      {
+        "name": "Enterprise Marketing Package",
+        "focus": "Full Strategy + Roadmap + High Volume Content"
+      }
+    ],
+    "add_ons": [
+      {
+        "type": "Content",
+        "name": "Copy Content",
+        "notes": "Core Values/ Key Point"
+      },
+      {
+        "type": "Content",
+        "name": "Knowledge Sharing",
+        "notes": "To Educated People"
+      },
+      {
+        "type": "Content",
+        "name": "Branding Script",
+        "notes": "Campaign/video scripts"
+      },
+      {
+        "type": "Graphic",
+        "name": "Static",
+        "notes": "Single posts"
+      },
+      {
+        "type": "Graphic",
+        "name": "Multiple",
+        "notes": "Multi-slide"
+      },
+      {
+        "type": "Graphic",
+        "name": "Motion",
+        "notes": "Animated graphics/video clips"
+      }
+    ]
+  }
+}

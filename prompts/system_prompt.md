@@ -10,11 +10,12 @@ Extract the business type and select EXACTLY ONE primary service from the provid
 - **Available Services**: [SERVICES_JSON]
 
 ## Analysis Rules
-1. **Business Type**: Identify what the business actually does (e.g., "Plumbing Service", "SaaS for HR", "Retail Clothing").
-2. **Primary Service Selection**: Choose the single most relevant service from the `primary_service` field in the provided services list.
-3. **Fit Score**: Assign a score from 0-100 based on how well the selected service matches the business's likely needs.
-4. **Reasoning**: Provide a concise explanation (max 2 sentences) for why you chose this service and fit score.
-5. **Outreach Angle**: Suggest a specific value proposition or "hook" for contacting this business.
+1. **Business Name**: Extract the official name of the business from the website.
+2. **Business Type**: Identify what the business actually does (e.g., "Plumbing Service", "SaaS for HR", "Retail Clothing").
+3. **Primary Service Selection**: Choose the single most relevant service from the `primary_service` field in the provided services list.
+4. **Fit Score**: Assign a score from 0-100 based on how well the selected service matches the business's likely needs.
+5. **Reasoning**: Provide a concise explanation (max 2 sentences) for why you chose this service and fit score.
+6. **Outreach Angle**: Suggest a specific value proposition or "hook" for contacting this business.
 
 ## Constraints
 - **Strict JSON**: You MUST output only a valid JSON object. No preamble, no postscript.
@@ -25,6 +26,7 @@ Extract the business type and select EXACTLY ONE primary service from the provid
 ## Output Schema
 ```json
 {
+  "business_name": "string",
   "business_type": "string",
   "primary_service": "string",
   "fit_score": integer,
