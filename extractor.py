@@ -62,6 +62,10 @@ class Extractor:
             
             # If API failed, return the error structure so the UI can handle it
             if "error" in result:
+                result["url"] = url
+                result["latency_fetch"] = 0.0
+                result["char_count"] = 0
+                result["text"] = f"Facebook Error: {result['error']}"
                 return result
                 
             # Otherwise, return it in the format expected by LeadEngine
@@ -69,6 +73,7 @@ class Extractor:
             return {
                 "url": url,
                 "text": result.get("text", ""),
+                "latency_fetch": result.get("latency_fetch", 0.0),
                 "char_count": len(result.get("text", "")),
                 "platform": "facebook",
                 "metadata": result
@@ -117,7 +122,7 @@ if __name__ == "__main__":
         extractor = Extractor()
         try:
             result = extractor.process(sys.argv[1])
-            print(f"URL: {result['url']}")
+            print(f"URL: {result.get('url', sys.argv[1])}")
             print(f"Latency: {result['latency_fetch']:.2f}s")
             print(f"Chars: {result['char_count']}")
             print("-" * 20)
