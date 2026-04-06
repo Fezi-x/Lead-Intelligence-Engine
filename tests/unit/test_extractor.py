@@ -59,3 +59,53 @@ def test_process_truncates_content(monkeypatch):
 
     assert len(result["text"]) == 20
     assert result["char_count"] == 20
+
+
+@pytest.mark.unit
+def test_extracts_rich_metadata_contacts_and_services(monkeypatch):
+    extractor = Extractor(max_chars=1000)
+
+    html = """
+    <html>
+      <head>
+        <title>Acme Plumbing</title>
+        <meta property="og:site_name" content="Acme Plumbing Co." />
+        <meta property="og:description" content="Fast emergency plumbing services." />
+        <meta property="og:url" content="https://acmeplumbing.example.com" />
+      </head>
+      <body>
+        <h1>Acme Plumbing</h1>
+        <address>123 Main St, Austin, TX 78701</address>
+        <a href="mailto:hello@acmeplumbing.example.com">Email</a>
+        <a href="tel:+15125551234">Call</a>
+        <a href="https://facebook.com/acmeplumbing">Facebook</a>
+        <a href="https://instagram.com/acmeplumbing">Instagram</a>
+        <section>
+          <h2>Services</h2>
+          <ul>
+            <li>Drain Cleaning</li>
+            <li>Water Heater Repair</li>
+          </ul>
+        </section>
+        <p>We handle residential and commercial plumbing.</p>
+      </body>
+    </html>
+    """
+
+    def fake_fetch_url(url, use_jina=False):
+        return (html, 0.1)
+
+    monkeypatch.setattr(extractor, "fetch_url", fake_fetch_url)
+
+    result = extractor.process("https://acmeplumbing.example.com")
+
+    assert result["name"] == "Acme Plumbing Co."
+    assert "Fast emergency plumbing services." in result["description"]
+    assert result["website"] == "https://acmeplumbing.example.com"
+    assert result["email"] == "hello@acmeplumbing.example.com"
+    assert result["phone"] == "+15125551234"
+    assert "Austin" in result["address"]
+    assert result["social_links"]["facebook"].endswith("facebook.com/acmeplumbing")
+    assert result["social_links"]["instagram"].endswith("instagram.com/acmeplumbing")
+    assert "Drain Cleaning" in result["services"]
+    assert "Business Name: Acme Plumbing Co." in result["text"]
