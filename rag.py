@@ -13,9 +13,12 @@ class RAG:
         for file_path in files:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
+                content_lower = content.lower()
                 self.corpus.append({
                     "source": os.path.basename(file_path),
-                    "content": content
+                    "content": content,
+                    "content_lower": content_lower,
+                    "words": set(content_lower.split())
                 })
 
     def retrieve(self, query_text, limit=3):
@@ -29,8 +32,8 @@ class RAG:
         query_words = set(query_text.split())
 
         for doc in self.corpus:
-            doc_content = doc["content"].lower()
-            doc_words = set(doc_content.split())
+            doc_content = doc["content_lower"]
+            doc_words = doc["words"]
             
             # Intersection score
             intersection = query_words.intersection(doc_words)

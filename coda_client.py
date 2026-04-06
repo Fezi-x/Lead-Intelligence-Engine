@@ -1,6 +1,7 @@
 import os
 import requests
 import logging
+import time
 from dotenv import load_dotenv
 
 # Configure logging
@@ -13,6 +14,9 @@ class CodaClient:
         self.api_token = os.getenv("CODA_API_TOKEN")
         self.doc_id = os.getenv("CODA_DOC_ID")
         self.table_id = os.getenv("CODA_TABLE_ID")
+        self._columns_cache = None
+        self._columns_cache_time = None
+        self._columns_cache_ttl = int(os.getenv("CODA_COLUMNS_CACHE_TTL", "300"))
         
         if not all([self.api_token, self.doc_id, self.table_id]):
             # We allow initialization but methods will fail if missing
@@ -24,16 +28,44 @@ class CodaClient:
             "Content-Type": "application/json"
         }
 
-    def _get_columns(self):
+    def _get_columns(self, refresh=False):
         """Fetches the list of columns available in the table."""
+        now = time.time()
+        if (
+            not refresh
+            and self._columns_cache is not None
+            and self._columns_cache_ttl > 0
+            and self._columns_cache_time is not None
+            and (now - self._columns_cache_time) < self._columns_cache_ttl
+        ):
+            return self._columns_cache
+
         url = f"https://coda.io/apis/v1/docs/{self.doc_id}/tables/{self.table_id}/columns"
         try:
             response = requests.get(url, headers=self._get_headers(), timeout=10)
             response.raise_for_status()
-            return [col['name'] for col in response.json().get('items', [])]
+            self._columns_cache = [col['name'] for col in response.json().get('items', [])]
+            self._columns_cache_time = now
+            return self._columns_cache
         except Exception as e:
             logger.error(f"Error fetching columns from Coda: {e}")
+            if self._columns_cache is not None:
+                return self._columns_cache
             return None
+
+    def _should_refresh_columns(self, error):
+        if not hasattr(error, "response") or error.response is None:
+            return False
+        if error.response.status_code not in (400, 404):
+            return False
+        body = (error.response.text or "").lower()
+        return "column" in body and ("not found" in body or "unknown" in body or "invalid" in body)
+
+    def _post_rows(self, row_payload):
+        url = f"https://coda.io/apis/v1/docs/{self.doc_id}/tables/{self.table_id}/rows"
+        response = requests.post(url, headers=self._get_headers(), json=row_payload, timeout=15)
+        response.raise_for_status()
+        return response.json()
 
     def fetch_row_by_url(self, url):
         """
@@ -69,8 +101,6 @@ class CodaClient:
         if not all([self.api_token, self.doc_id, self.table_id]):
             raise ValueError("Coda configuration (Token, Doc ID, Table ID) is incomplete in .env.")
 
-        url = f"https://coda.io/apis/v1/docs/{self.doc_id}/tables/{self.table_id}/rows"
-        
         # Get actual columns to be safe
         existing_columns = self._get_columns()
         
@@ -108,10 +138,35 @@ class CodaClient:
         }
 
         try:
-            response = requests.post(url, headers=self._get_headers(), json=row_payload, timeout=15)
-            response.raise_for_status()
-            return response.json()
+            return self._post_rows(row_payload)
         except requests.exceptions.RequestException as e:
+            if self._should_refresh_columns(e):
+                existing_columns = self._get_columns(refresh=True)
+                if existing_columns:
+                    cells = [cell for cell in desired_cells if cell["column"] in existing_columns]
+                else:
+                    cells = desired_cells
+
+                for cell in cells:
+                    if cell["value"] is None:
+                        cell["value"] = ""
+
+                row_payload = {
+                    "rows": [
+                        {
+                            "cells": cells
+                        }
+                    ]
+                }
+
+                try:
+                    return self._post_rows(row_payload)
+                except requests.exceptions.RequestException as e2:
+                    error_detail = ""
+                    if hasattr(e2, 'response') and e2.response is not None:
+                        error_detail = f" | Details: {e2.response.text[:200]}"
+                    raise Exception(f"Coda API Error: {str(e2)}{error_detail}")
+
             error_detail = ""
             if hasattr(e, 'response') and e.response is not None:
                 error_detail = f" | Details: {e.response.text[:200]}"

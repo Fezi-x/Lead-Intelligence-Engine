@@ -28,20 +28,34 @@ class Evaluator:
         self.model = model
         self.services_path = "services/services.json"
         self.prompt_path = "prompts/system_prompt.md"
+        self._services_cache = None
+        self._services_mtime = None
+        self._prompt_cache = None
+        self._prompt_mtime = None
 
     def _load_services(self):
         """Loads the services source of truth."""
         try:
+            mtime = os.path.getmtime(self.services_path)
+            if self._services_cache is not None and self._services_mtime == mtime:
+                return self._services_cache
             with open(self.services_path, 'r') as f:
-                return json.load(f)
+                self._services_cache = json.load(f)
+            self._services_mtime = mtime
+            return self._services_cache
         except Exception as e:
             raise Exception(f"CRITICAL: Failed to load services from {self.services_path}: {e}")
 
     def _load_prompt(self):
         """Loads the system prompt."""
         try:
+            mtime = os.path.getmtime(self.prompt_path)
+            if self._prompt_cache is not None and self._prompt_mtime == mtime:
+                return self._prompt_cache
             with open(self.prompt_path, 'r') as f:
-                return f.read()
+                self._prompt_cache = f.read()
+            self._prompt_mtime = mtime
+            return self._prompt_cache
         except Exception as e:
             raise Exception(f"CRITICAL: Failed to load system prompt from {self.prompt_path}: {e}")
 

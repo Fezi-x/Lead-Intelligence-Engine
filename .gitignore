@@ -9,3 +9,4 @@ env/
 logs/
 facebook_auth.json
 local_tools/
+state.json
