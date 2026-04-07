@@ -106,6 +106,16 @@ async def process_lead_analysis(update: Update, url: str):
     except Exception as e:
         logger.error(f"Analysis Error: {e}")
         error_msg = str(e)
+        
+        if "FACEBOOK_LOGIN_REQUIRED" in error_msg:
+            await status_message.edit_text(
+                "🚨 *Facebook Session Expired*\n\n"
+                "The bot's Facebook session has expired. Please re-authenticate by running this command on the server:\n\n"
+                "`python facebook_browser_client.py --login`",
+                parse_mode='Markdown'
+            )
+            return
+
         if "facebook.com" in url.lower():
             error_msg = "Facebook public metadata unavailable. Please provide website link if available."
         await status_message.edit_text(f"Error processing {url}:\n\n{error_msg}")

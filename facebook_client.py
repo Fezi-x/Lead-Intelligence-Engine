@@ -5,6 +5,7 @@ import re
 import asyncio
 import time
 from dotenv import load_dotenv
+from facebook_browser_client import FacebookLoginRequiredError
 
 # Configure logging
 if not os.path.exists('logs'):
@@ -77,11 +78,17 @@ async def get_facebook_page_data_browser(url: str) -> dict:
                 "category": data.get("category", ""),
                 "followers": data.get("followers", 0),
                 "website": data.get("website", ""),
+                "email": data.get("email", ""),
+                "phone": data.get("phone", ""),
+                "address": data.get("address", ""),
                 "recent_posts": data.get("recent_posts", []),
                 "url": url,
                 "latency_fetch": time.time() - start_time
             }
             return normalized
+    except FacebookLoginRequiredError as e:
+        logger.error(f"Facebook Login Required: {e}")
+        return {"error": "FACEBOOK_LOGIN_REQUIRED", "details": str(e), "latency_fetch": time.time() - start_time}
     except Exception as e:
         logger.error(f"Browser extraction failed: {e}")
         return {"error": f"Browser workaround failed: {str(e)}", "latency_fetch": time.time() - start_time}
@@ -99,18 +106,23 @@ def get_facebook_page_data(url: str) -> dict:
     if "error" in result:
         logger.info(f"Graph API failed for {url}, trying browser workaround...")
         try:
-            # Run the async browser extraction in a sync wrapper
-            # Note: This might need careful handling depending on the environment
-            try:
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
+            # Run the async browser extraction in a way that works both from sync and running loops
+            import threading
+            from concurrent.futures import ThreadPoolExecutor
 
-            if loop.is_running():
-                browser_result = loop.run_until_complete(get_facebook_page_data_browser(url))
-            else:
-                browser_result = asyncio.run(get_facebook_page_data_browser(url))
+            browser_result = {}
+            def run_async_browser():
+                nonlocal browser_result
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    browser_result = new_loop.run_until_complete(get_facebook_page_data_browser(url))
+                finally:
+                    new_loop.close()
+
+            thread = threading.Thread(target=run_async_browser)
+            thread.start()
+            thread.join()
             
             total_latency += browser_result.get("latency_fetch", 0)
             result = browser_result
@@ -129,6 +141,9 @@ def get_facebook_page_data(url: str) -> dict:
             f"About: {result.get('description', 'N/A')}",
             f"Followers: {result.get('followers', 0)}",
             f"Website: {result.get('website', 'N/A')}",
+            f"Email: {result.get('email', 'N/A')}",
+            f"Phone: {result.get('phone', 'N/A')}",
+            f"Address: {result.get('address', 'N/A')}",
             f"Recent Posts: {', '.join(result.get('recent_posts', []))}"
         ]
         result["text"] = "\n".join(part for part in content_parts if part)

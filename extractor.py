@@ -6,7 +6,7 @@ import logging
 from urllib.parse import unquote, urlparse, parse_qs
 import json
 
-from playwright.sync_api import sync_playwright # type: ignore
+
 
 logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
@@ -363,135 +363,34 @@ class Extractor:
         return f"{structured}\n\n{raw_text[: max(0, remaining)]}"
 
     # =========================
-    # PLAYWRIGHT FACEBOOK
-    # =========================
-    def extract_facebook_playwright(self, url, result):
-        start = time.time()
-
-        try:
-            with sync_playwright() as p:
-                browser = p.chromium.launch(headless=True)
-                page = browser.new_page()
-                page.goto(url, timeout=15000)
-
-                page.wait_for_timeout(4000)
-
-                # Try to navigate to About section for richer metadata
-                try:
-                    page.click('a:has-text("About")', timeout=3000)
-                    page.wait_for_timeout(3000)
-                except:
-                    pass
-
-                content = page.content()
-                text = page.inner_text("body")
-
-                # Attempt to capture some posts
-                try:
-                    page.wait_for_selector('div[role="article"]', timeout=3000)
-                    posts = page.locator('div[role="article"]').all()
-                    recent_posts = []
-                    for post in posts[:3]:
-                        post_text = post.inner_text()
-                        lines = [l.strip() for l in post_text.split("\n") if l.strip()]
-                        if lines:
-                            recent_posts.append(" ".join(lines[:3]))
-                    if recent_posts:
-                        result["recent_posts"] = [{"text": p[:200]} for p in recent_posts]
-                except:
-                    pass
-
-                browser.close()
-
-                # Followers
-                match = re.search(r'([\d,]+)\s+followers', text.lower())
-                if match:
-                    result["followers"] = self._safe_int(match.group(1))
-
-                # Name (title fallback)
-                soup = BeautifulSoup(content, "html.parser")
-                if soup.title:
-                    result["name"] = soup.title.text.replace(" | Facebook", "").strip()
-
-                # Description/About
-                meta_desc = ""
-                meta_tag = soup.find("meta", property="og:description")
-                if meta_tag and meta_tag.get("content"):
-                    meta_desc = meta_tag["content"].strip()
-
-                if not result["description"] and meta_desc:
-                    result["description"] = meta_desc
-
-                # Category
-                if not result["category"]:
-                    cat_match = re.search(r"page\s*[·•]\s*([^\n]+)", text, flags=re.IGNORECASE)
-                    if cat_match:
-                        result["category"] = cat_match.group(1).strip()
-
-                # Website
-                for a in soup.find_all("a", href=True):
-                    if "l.facebook.com/l.php?u=" in a["href"]:
-                        parsed = urlparse(a["href"])
-                        qs = parse_qs(parsed.query)
-                        target = qs.get("u", [""])[0]
-                        result["website"] = unquote(target) or a["href"]
-                        break
-
-                # Address / Location
-                if not result["address"]:
-                    addr_match = re.search(r"(Address|Location)\s*[:\-]\s*([^\n]+)", text, flags=re.IGNORECASE)
-                    if addr_match:
-                        result["address"] = addr_match.group(2).strip()
-
-                result["text"] = text
-
-                result["latency_fetch"] += time.time() - start
-
-        except Exception as e:
-            result["errors"].append(f"playwright_failed: {str(e)}")
-
-        return result
-
-    # =========================
     # FACEBOOK PIPELINE
     # =========================
     def extract_facebook(self, url):
-        result = self.base_schema(url, "facebook")
+        """Extracts Facebook data using either Graph API or Browser workaround."""
+        try:
+            from facebook_client import get_facebook_page_data
+            fb = get_facebook_page_data(url)
+            
+            if "error" in fb:
+                # Propagate specific login error or general error
+                return {"error": fb.get("details") or fb.get("error"), "url": url}
 
-        # STEP 1: Playwright (primary)
-        result = self.extract_facebook_playwright(url, result)
-
-        # STEP 2: API fallback
-        if result["followers"] == 0 and not result["description"]:
-            try:
-                from facebook_client import get_facebook_page_data
-                fb = get_facebook_page_data(url)
-
-                result["name"] = result["name"] or fb.get("name", "")
-                result["description"] = result["description"] or fb.get("description", "") or fb.get("about", "")
-                result["followers"] = result["followers"] or self._safe_int(fb.get("followers"))
-                result["category"] = result["category"] or fb.get("category", "")
-                result["website"] = result["website"] or fb.get("website", "")
-                if not result["recent_posts"]:
-                    posts = fb.get("recent_posts", [])
-                    if posts:
-                        result["recent_posts"] = [{"text": p[:200]} for p in posts]
-
-            except Exception as e:
-                result["errors"].append(f"api_failed: {str(e)}")
-
-        # STEP 3: Jina fallback
-        if len(result["text"]) < 100:
-            try:
-                jina, lat = self.fetch_url(url, use_jina=True)
-                result["text"] = jina
-                result["latency_fetch"] += lat
-            except Exception as e:
-                result["errors"].append(f"jina_failed: {str(e)}")
-
-        result["text"] = self._compose_text(result, result["text"])
-        result["char_count"] = len(result["text"])
-        return result
+            result = self.base_schema(url, "facebook")
+            result["name"] = fb.get("name") or result["name"]
+            result["description"] = fb.get("description") or fb.get("about") or result["description"]
+            result["followers"] = self._safe_int(fb.get("followers")) or result["followers"]
+            result["category"] = fb.get("category") or result["category"]
+            result["website"] = fb.get("website") or result["website"]
+            result["email"] = fb.get("email") or result["email"]
+            result["phone"] = fb.get("phone") or result["phone"]
+            result["address"] = fb.get("address") or result["address"]
+            result["recent_posts"] = fb.get("recent_posts", [])
+            result["text"] = fb.get("text", "")
+            result["latency_fetch"] = fb.get("latency_fetch", 0)
+            
+            return result
+        except Exception as e:
+            return {"error": f"facebook_client_failed: {str(e)}", "url": url}
 
     # =========================
     # WEBSITE
